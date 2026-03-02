@@ -72,6 +72,15 @@ chore: update electron to 40.1
 docs: add contributing guide
 ```
 
+## Filing Issues
+
+If you use [Claude Code](https://docs.anthropic.com/en/docs/claude-code), two slash commands are available:
+
+- `/bug-report` — create a structured bug report issue on GitHub
+- `/feature-request` — create a structured feature request issue on GitHub
+
+These commands auto-gather git context, batch questions, and create the issue via `gh` CLI.
+
 ## Pull Requests
 
 1. Create a branch on origin following the naming convention above.
