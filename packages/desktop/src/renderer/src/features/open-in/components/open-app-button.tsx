@@ -1,4 +1,4 @@
-import { ChevronDown, Copy, Loader2 } from "lucide-react";
+import { ChevronDown, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../../../components/ui/button";
 import {
@@ -59,7 +59,7 @@ interface OpenAppButtonProps {
 
 export function OpenAppButton({ cwd }: OpenAppButtonProps) {
   const [apps, setApps] = useState<App[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [hasDetected, setHasDetected] = useState(false);
   const [defaultOpenApp, setDefaultOpenApp] = useState<App | null>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     return stored as App | null;
@@ -68,9 +68,8 @@ export function OpenAppButton({ cwd }: OpenAppButtonProps) {
   useEffect(() => {
     if (!defaultOpenApp && apps.length === 0) {
       client.utils.detectApps().then((response) => {
-        if (response.apps.length > 0) {
-          setApps(response.apps);
-        }
+        setApps(response.apps);
+        setHasDetected(true);
       });
     }
   }, [defaultOpenApp, apps.length]);
@@ -80,14 +79,12 @@ export function OpenAppButton({ cwd }: OpenAppButtonProps) {
 
   const handleOpenChange = async (open: boolean) => {
     if (open) {
-      setIsLoading(true);
       try {
         const response = await client.utils.detectApps();
         setApps(response.apps);
+        setHasDetected(true);
       } catch (error) {
         console.error("Failed to detect apps:", error);
-      } finally {
-        setIsLoading(false);
       }
     }
   };
@@ -140,12 +137,7 @@ export function OpenAppButton({ cwd }: OpenAppButtonProps) {
           }
         />
         <DropdownMenuContent align="end">
-          {isLoading ? (
-            <div className="flex items-center justify-center px-4 py-2">
-              <Loader2 className="mr-2 size-4 animate-spin" />
-              <span className="text-sm text-muted-foreground">Detecting apps...</span>
-            </div>
-          ) : apps.length === 0 ? (
+          {apps.length === 0 && hasDetected ? (
             <div className="px-4 py-2">
               <span className="text-sm text-muted-foreground">No apps detected</span>
             </div>
