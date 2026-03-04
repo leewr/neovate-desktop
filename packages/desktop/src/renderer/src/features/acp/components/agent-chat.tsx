@@ -8,6 +8,7 @@ const chatLog = debug("neovate:acp-chat");
 import { useAcpConnect } from "../hooks/use-acp-connect";
 import { useAcpPrompt } from "../hooks/use-acp-prompt";
 import { useAcpPermission } from "../hooks/use-acp-permission";
+import { useAcpNewSession } from "../hooks/use-acp-new-session";
 import { AgentSelector } from "./agent-selector";
 import { WorkdirPicker } from "./workdir-picker";
 import { MessageList } from "./message-list";
@@ -37,6 +38,7 @@ export function AgentChat() {
   const { connect, connecting } = useAcpConnect();
   const { sendPrompt, cancel } = useAcpPrompt();
   const { resolvePermission } = useAcpPermission();
+  const { createNewSession } = useAcpNewSession();
 
   const activeSession = activeSessionId ? sessions.get(activeSessionId) : undefined;
 
@@ -136,9 +138,17 @@ export function AgentChat() {
     connect("claude", activeProjectPath)
       .then(({ connectionId }) => {
         setConnectionForProject(activeProjectPath, connectionId);
+        createNewSession(connectionId).catch(() => {});
       })
       .catch(() => {});
-  }, [activeProjectPath, activeConnectionId, connecting, connect, setConnectionForProject]);
+  }, [
+    activeProjectPath,
+    activeConnectionId,
+    connecting,
+    connect,
+    setConnectionForProject,
+    createNewSession,
+  ]);
 
   const handleConnect = async () => {
     if (!selectedAgentId) return;
@@ -184,8 +194,8 @@ export function AgentChat() {
     );
   }
 
-  // State 2: Connected but no session yet — show welcome panel with input
-  if (!activeSession) {
+  // State 2: Connected but no session yet (or new empty session) — show welcome panel with input
+  if (!activeSession || activeSession.isNew) {
     return (
       <div className="flex h-full flex-col">
         <WelcomePanel />

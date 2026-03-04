@@ -39,6 +39,7 @@ export type AcpSession = {
   cwd?: string;
   title?: string;
   createdAt: string;
+  isNew: boolean;
   messages: AcpMessage[];
   toolCalls: Map<string, ToolCallState>;
   streaming: boolean;
@@ -66,7 +67,7 @@ type AcpState = {
   createSession: (
     sessionId: string,
     connectionId: string,
-    meta?: { title?: string; createdAt?: string; cwd?: string },
+    meta?: { title?: string; createdAt?: string; cwd?: string; isNew?: boolean },
   ) => void;
   removeSession: (sessionId: string) => void;
   addUserMessage: (sessionId: string, content: string) => void;
@@ -116,6 +117,7 @@ export const useAcpStore = create<AcpState>()(
           cwd: meta?.cwd,
           title: meta?.title,
           createdAt: meta?.createdAt ?? new Date().toISOString(),
+          isNew: meta?.isNew ?? false,
           messages: [],
           toolCalls: new Map(),
           streaming: false,
@@ -140,6 +142,7 @@ export const useAcpStore = create<AcpState>()(
       set((state) => {
         const session = state.sessions.get(sessionId);
         if (!session) return;
+        session.isNew = false;
         if (!session.title) {
           session.title = content.slice(0, 50);
         }

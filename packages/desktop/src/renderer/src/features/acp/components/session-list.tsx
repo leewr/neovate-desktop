@@ -12,6 +12,7 @@ import {
   ContextMenuSeparator,
 } from "../../../components/ui/context-menu";
 import { Button } from "../../../components/ui/button";
+import { useAcpNewSession } from "../hooks/use-acp-new-session";
 import type { AcpSession } from "../store";
 import type { SessionInfo } from "../../../../../shared/features/acp/types";
 
@@ -136,6 +137,7 @@ export function SessionList() {
   const pinnedSessions = useProjectStore((s) => s.pinnedSessions);
   const loadSessionPreferences = useProjectStore((s) => s.loadSessionPreferences);
 
+  const { createNewSession } = useAcpNewSession();
   const [restoring, setRestoring] = useState<string | null>(null);
 
   // Hydrate archived/pinned state from main process on mount / project change
@@ -222,7 +224,7 @@ export function SessionList() {
 
   // In-memory sessions filtered by project, excluding archived
   const allInMemory = (Array.from(sessions.values()) as AcpSession[]).filter(
-    (s) => matchesProject(s.cwd) && !isArchived(s.sessionId),
+    (s) => matchesProject(s.cwd) && !isArchived(s.sessionId) && !s.isNew,
   );
   const pinnedInMemory = allInMemory.filter((s) => isPinned(s.sessionId));
   const regularInMemory = allInMemory.filter((s) => !isPinned(s.sessionId));
@@ -273,7 +275,11 @@ export function SessionList() {
         variant="outline"
         size="sm"
         className="mt-1 w-full"
-        onClick={() => setActiveSession(null)}
+        onClick={() => {
+          if (connectionId) {
+            createNewSession(connectionId);
+          }
+        }}
       >
         <Plus size={14} />
         <span>New Chat</span>
