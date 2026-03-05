@@ -15,7 +15,7 @@ export type TimingEntry = {
   timestamp: number;
 };
 
-export type SlashCommandInfo = { name: string; description?: string };
+export type SlashCommandInfo = { name: string; description?: string; argumentHint?: string };
 
 /** What the eventIterator yields to the renderer */
 export type StreamEvent =
