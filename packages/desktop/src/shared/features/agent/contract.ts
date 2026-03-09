@@ -16,6 +16,14 @@ import type {
   McpServerStatus,
   McpSetServersResult,
 } from "./types";
+import type { Query } from "@anthropic-ai/claude-agent-sdk";
+import type {
+  ClaudeCodeUIMessage,
+  ClaudeCodeUIMessageChunk,
+  ClaudeCodeUIEvent,
+  ClaudeCodeUIDispatch,
+  ClaudeCodeUIDispatchResult,
+} from "../../claude-code/types";
 
 const promptErrorDataSchema = type<{
   source: "agent";
@@ -126,4 +134,31 @@ export const agentContract = {
   setModelSetting: oc
     .input(z.object({ sessionId: z.string(), model: z.string() }))
     .output(type<void>()),
+
+  // V2: new transport endpoints under a dedicated sub-namespace
+  claudeCode: {
+    createSession: oc
+      .input(z.object({ cwd: z.string(), model: z.string().optional() }))
+      .output(type<{ sessionId: string } & Awaited<ReturnType<Query["initializationResult"]>>>()),
+
+    stream: oc
+      .input(type<{ sessionId: string; message: ClaudeCodeUIMessage }>())
+      .output(eventIterator(type<ClaudeCodeUIMessageChunk>())),
+
+    subscribe: oc
+      .input(type<{ sessionId: string }>())
+      .output(eventIterator(type<ClaudeCodeUIEvent>())),
+
+    dispatch: oc
+      .input(type<{ sessionId: string; dispatch: ClaudeCodeUIDispatch }>())
+      .output(type<ClaudeCodeUIDispatchResult>()),
+
+    loadSession: oc.input(z.object({ sessionId: z.string(), cwd: z.string() })).output(
+      type<{
+        sessionId: string;
+        capabilities: Awaited<ReturnType<Query["initializationResult"]>>;
+        messages: ClaudeCodeUIMessage[];
+      }>(),
+    ),
+  },
 };

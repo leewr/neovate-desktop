@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import debug from "debug";
+import type { PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import { client } from "../../../orpc";
 import { useAgentStore } from "../store";
 import { useProjectStore } from "../../project/store";
@@ -7,10 +8,15 @@ import { useConfigStore } from "../../config/store";
 import type { ImageAttachment } from "../../../../../shared/features/agent/types";
 
 const chatLog = debug("neovate:agent-chat");
-import { usePrompt } from "../hooks/use-prompt";
-import { usePermission } from "../hooks/use-permission";
 import { useNewSession } from "../hooks/use-new-session";
-import { MessageList } from "./message-list";
+import { useClaudeCodeChat } from "../hooks/use-claude-code-chat";
+import { claudeCodeChatManager } from "../chat-manager";
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from "../../../components/ai-elements/conversation";
+import { MessageParts } from "./message-parts";
 import { MessageInput } from "./message-input";
 import { PermissionDialog } from "./permission-dialog";
 import { WelcomePanel } from "./welcome-panel";
@@ -27,8 +33,6 @@ export function AgentChat() {
   const setAgentSessions = useAgentStore((s) => s.setAgentSessions);
   const sessions = useAgentStore((s) => s.sessions);
 
-  const { sendPrompt, cancel } = usePrompt();
-  const { resolvePermission } = usePermission();
   const { createNewSession } = useNewSession();
 
   const activeSession = activeSessionId ? sessions.get(activeSessionId) : undefined;
@@ -37,13 +41,11 @@ export function AgentChat() {
   const initializedPathRef = useRef<string | null>(null);
 
   chatLog(
-    "render: activeProject=%s activeSession=%s sessionCount=%d isNew=%s streaming=%s hasPerm=%s",
+    "render: activeProject=%s activeSession=%s sessionCount=%d isNew=%s",
     activeProjectPath || "none",
     activeSessionId?.slice(0, 8) ?? "none",
     sessions.size,
     activeSession?.isNew ?? "-",
-    activeSession?.streaming ?? "-",
-    activeSession?.pendingPermission ? "yes" : "no",
   );
 
   // On project switch: list sessions and create a new empty session
@@ -106,28 +108,16 @@ export function AgentChat() {
   const handleSend = (message: string, attachments?: ImageAttachment[]) => {
     chatLog(
       "handleSend: sessionId=%s msgLen=%d attachments=%d",
-      activeSession?.sessionId?.slice(0, 8) ?? "new",
+      activeSessionId?.slice(0, 8) ?? "new",
       message.length,
       attachments?.length ?? 0,
     );
-    sendPrompt(activeSession?.sessionId, message, attachments);
-  };
-
-  const handleCancel = () => {
-    if (!activeSession) return;
-    chatLog("handleCancel: sessionId=%s", activeSession.sessionId.slice(0, 8));
-    cancel(activeSession.sessionId);
-  };
-
-  const handleResolvePermission = (requestId: string, allow: boolean) => {
-    if (!activeSession) return;
-    chatLog(
-      "handleResolvePermission: sessionId=%s requestId=%s allow=%s",
-      activeSession.sessionId.slice(0, 8),
-      requestId,
-      allow,
-    );
-    resolvePermission(activeSession.sessionId, requestId, allow);
+    if (!activeSessionId) return;
+    useAgentStore.getState().addUserMessage(activeSessionId, message);
+    claudeCodeChatManager.getChat(activeSessionId)?.sendMessage({
+      text: message,
+      metadata: { sessionId: activeSessionId, parentToolUseId: null },
+    });
   };
 
   // State 1: No session yet (or new empty session) — show welcome panel with input
@@ -152,40 +142,83 @@ export function AgentChat() {
   }
 
   // State 2: Active session — full chat
-  chatLog(
-    "render: showing chat msgs=%d streaming=%s error=%s perm=%s",
-    activeSession.messages.length,
-    activeSession.streaming,
-    activeSession.promptError ?? "none",
-    activeSession.pendingPermission?.toolName ?? "none",
+  return (
+    <AgentChatSession
+      key={activeSessionId}
+      sessionId={activeSessionId!}
+      cwd={cwd}
+      tasks={activeSession?.tasks}
+    />
   );
+}
+
+function AgentChatSession({
+  sessionId,
+  cwd,
+  tasks,
+}: {
+  sessionId: string;
+  cwd: string;
+  tasks: Map<string, import("../store").TaskState>;
+}) {
+  const { messages, status, error, pendingRequests, sendMessage, respondToRequest, stop } =
+    useClaudeCodeChat(sessionId);
+
+  chatLog(
+    "render: showing chat msgs=%d status=%s pendingReqs=%d",
+    messages.length,
+    status,
+    pendingRequests.length,
+  );
+
+  const handleSend = (text: string) => {
+    chatLog("handleSend: sessionId=%s msgLen=%d", sessionId.slice(0, 8), text.length);
+    sendMessage({ text, metadata: { sessionId, parentToolUseId: null } });
+  };
+
+  const handleCancel = () => {
+    chatLog("handleCancel: sessionId=%s", sessionId.slice(0, 8));
+    stop();
+  };
+
+  const handleResolve = (requestId: string, result: PermissionResult) => {
+    chatLog(
+      "handleResolvePermission: sessionId=%s requestId=%s behavior=%s",
+      sessionId.slice(0, 8),
+      requestId,
+      result.behavior,
+    );
+    respondToRequest(requestId, { type: "permission_request", result });
+  };
+
   return (
     <div className="flex h-full flex-col">
-      <MessageList messages={activeSession.messages} streaming={activeSession.streaming} />
-      {activeSession.pendingPermission && (
+      <Conversation>
+        <ConversationContent>
+          {messages.map((message) => (
+            <MessageParts key={message.id} message={message} />
+          ))}
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
+      {pendingRequests.map((req) => (
         <PermissionDialog
-          permission={activeSession.pendingPermission}
-          onResolve={handleResolvePermission}
+          key={req.requestId}
+          requestId={req.requestId}
+          request={req.request}
+          onResolve={handleResolve}
         />
-      )}
-      <TaskProgress tasks={activeSession.tasks} />
-      {activeSession.usage && (
-        <div className="flex items-center gap-3 border-t border-border px-4 py-1 text-[10px] text-muted-foreground/60">
-          <span>${activeSession.usage.totalCostUsd.toFixed(4)}</span>
-          <span>{activeSession.usage.totalInputTokens.toLocaleString()} in</span>
-          <span>{activeSession.usage.totalOutputTokens.toLocaleString()} out</span>
-        </div>
-      )}
-      {activeSession.promptError && (
+      ))}
+      <TaskProgress tasks={tasks} />
+      {error && (
         <div className="mx-4 mb-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-700">
-          {activeSession.promptError}
+          {error.message}
         </div>
       )}
       <MessageInput
         onSend={handleSend}
         onCancel={handleCancel}
-        streaming={activeSession.streaming}
-        disabled={!activeProjectPath}
+        streaming={status === "streaming"}
         cwd={cwd}
       />
     </div>

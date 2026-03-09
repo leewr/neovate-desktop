@@ -1,4 +1,4 @@
-import type { MultiEditUIToolInvocation } from "../../../../shared/claude-code";
+import type { MultiEditUIToolInvocation } from "../../../../shared/claude-code/types";
 
 import type { BundledLanguage } from "shiki";
 import { CodeBlock } from "../ai-elements/code-block";

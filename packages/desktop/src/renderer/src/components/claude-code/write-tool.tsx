@@ -1,4 +1,4 @@
-import type { WriteUIToolInvocation } from "../../../../shared/claude-code";
+import type { WriteUIToolInvocation } from "../../../../shared/claude-code/types";
 
 import type { BundledLanguage } from "shiki";
 import { CodeBlock } from "../ai-elements/code-block";

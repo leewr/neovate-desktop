@@ -293,4 +293,46 @@ export const agentRouter = os.agent.router({
     agentLog("setModelSetting: sessionId=%s model=%s", input.sessionId, input.model);
     writeModelToSettings(input.sessionId, input.model);
   }),
+
+  // V2: new transport endpoints under claudeCode sub-namespace
+  claudeCode: os.agent.claudeCode.router({
+    createSession: os.agent.claudeCode.createSession.handler(async ({ input, context }) => {
+      agentLog("claudeCode.createSession: cwd=%s model=%s", input.cwd, input.model);
+      try {
+        return await context.sessionManager.createSessionV2(input.cwd, input.model);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to create session";
+        throw new ORPCError("BAD_GATEWAY", { defined: true, message });
+      }
+    }),
+
+    stream: os.agent.claudeCode.stream.handler(async function* ({ input, context }) {
+      for await (const chunk of context.sessionManager.stream(input.sessionId, input.message)) {
+        yield chunk;
+      }
+    }),
+
+    subscribe: os.agent.claudeCode.subscribe.handler(async function* ({ input, context, signal }) {
+      for await (const event of context.sessionManager.eventPublisher.subscribe(input.sessionId, {
+        signal,
+      })) {
+        yield event;
+      }
+    }),
+
+    dispatch: os.agent.claudeCode.dispatch.handler(({ input, context }) => {
+      return context.sessionManager.handleDispatch(input.sessionId, input.dispatch);
+    }),
+
+    loadSession: os.agent.claudeCode.loadSession.handler(async ({ input, context }) => {
+      agentLog("claudeCode.loadSession: sessionId=%s cwd=%s", input.sessionId, input.cwd);
+      try {
+        return await context.sessionManager.loadSessionV2(input.sessionId, input.cwd);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load session";
+        agentLog("claudeCode.loadSession: FAILED error=%s", message);
+        throw new ORPCError("BAD_GATEWAY", { defined: true, message });
+      }
+    }),
+  }),
 });

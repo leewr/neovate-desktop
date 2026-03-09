@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import debug from "debug";
-import { client } from "../../../orpc";
 import { useAgentStore } from "../store";
+import { claudeCodeChatManager } from "../chat-manager";
 
 const loadLog = debug("neovate:agent-load-session");
 
@@ -9,8 +9,8 @@ export function useLoadSession(fallbackCwd?: string) {
   const setActiveSession = useAgentStore((s) => s.setActiveSession);
   const createSession = useAgentStore((s) => s.createSession);
   const removeSession = useAgentStore((s) => s.removeSession);
-  const appendChunk = useAgentStore((s) => s.appendChunk);
-  const setSdkReady = useAgentStore((s) => s.setSdkReady);
+  const setAvailableCommands = useAgentStore((s) => s.setAvailableCommands);
+  const setAvailableModels = useAgentStore((s) => s.setAvailableModels);
 
   const loadAbortRef = useRef<AbortController | null>(null);
 
@@ -23,9 +23,10 @@ export function useLoadSession(fallbackCwd?: string) {
 
   const loadSession = useCallback(
     async (sessionId: string) => {
-      const { sessions, agentSessions } = useAgentStore.getState();
+      const { agentSessions } = useAgentStore.getState();
 
-      if (sessions.has(sessionId)) {
+      // Already loaded in v2 manager — just switch
+      if (claudeCodeChatManager.getChat(sessionId)) {
         loadLog("already loaded sid=%s, switching", sessionId.slice(0, 8));
         setActiveSession(sessionId);
         return;
@@ -37,6 +38,9 @@ export function useLoadSession(fallbackCwd?: string) {
 
       const info = agentSessions.find((s) => s.sessionId === sessionId);
       const cwd = info?.cwd ?? fallbackCwd;
+      if (!cwd) {
+        throw new Error(`No cwd available for session ${sessionId}`);
+      }
       loadLog("START sid=%s cwd=%s", sessionId.slice(0, 8), cwd);
       const t0 = performance.now();
 
@@ -44,29 +48,27 @@ export function useLoadSession(fallbackCwd?: string) {
         "info=%o",
         info ? { title: info.title, cwd: info.cwd } : "not found in agentSessions",
       );
-      createSession(
-        sessionId,
-        info ? { title: info.title, createdAt: info.createdAt, cwd: info.cwd } : undefined,
-      );
 
       try {
-        const iterator = await client.agent.loadSession({ sessionId, cwd }, { signal: ac.signal });
-        let eventCount = 0;
-        for await (const event of iterator) {
-          eventCount++;
-          appendChunk(sessionId, event);
-        }
-        setSdkReady(sessionId, true);
-        loadLog(
-          "SDK ready sid=%s in %dms events=%d",
-          sessionId.slice(0, 8),
-          Math.round(performance.now() - t0),
-          eventCount,
+        const { commands, models } = await claudeCodeChatManager.loadSession(sessionId, cwd);
+
+        // Register in old store AFTER chat is created in manager,
+        // so React render finds getChat() ready before useClaudeCodeChat runs
+        createSession(
+          sessionId,
+          info ? { title: info.title, createdAt: info.createdAt, cwd: info.cwd } : undefined,
         );
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          return;
+
+        if (commands?.length) {
+          setAvailableCommands(sessionId, commands);
         }
+        if (models?.length) {
+          setAvailableModels(sessionId, models);
+        }
+
+        loadLog("DONE sid=%s in %dms", sessionId.slice(0, 8), Math.round(performance.now() - t0));
+      } catch (error) {
+        if (ac.signal.aborted) return;
         loadLog(
           "FAILED sid=%s in %dms error=%s",
           sessionId.slice(0, 8),
@@ -80,7 +82,14 @@ export function useLoadSession(fallbackCwd?: string) {
         }
       }
     },
-    [setActiveSession, createSession, removeSession, appendChunk, setSdkReady, fallbackCwd],
+    [
+      setActiveSession,
+      createSession,
+      removeSession,
+      setAvailableCommands,
+      setAvailableModels,
+      fallbackCwd,
+    ],
   );
 
   return loadSession;

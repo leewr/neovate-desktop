@@ -1,4 +1,4 @@
-import type { TodoWriteUIToolInvocation } from "../../../../shared/claude-code";
+import type { TodoWriteUIToolInvocation } from "../../../../shared/claude-code/types";
 
 import { cn } from "../../lib/utils";
 import { Tool, ToolContent, ToolHeader } from "../ai-elements/tool";

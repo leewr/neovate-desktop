@@ -1,4 +1,4 @@
-import type { ClaudeCodeTools, TaskUIToolInvocation } from "../../../../shared/claude-code";
+import type { ClaudeCodeUITools, TaskUIToolInvocation } from "../../../../shared/claude-code/types";
 
 import { MessageResponse } from "../ai-elements/message";
 import { Tool, ToolContent, ToolHeader } from "../ai-elements/tool";
@@ -16,9 +16,9 @@ export function ClaudeCodeTaskTool({
   invocation,
   renderToolPart,
 }: {
-  message: UIMessage<unknown, UIDataTypes, ClaudeCodeTools>;
+  message: UIMessage<unknown, UIDataTypes, ClaudeCodeUITools>;
   invocation: TaskUIToolInvocation;
-  renderToolPart?: (part: ToolUIPart<ClaudeCodeTools> | DynamicToolUIPart) => ReactNode;
+  renderToolPart?: (part: ToolUIPart<ClaudeCodeUITools> | DynamicToolUIPart) => ReactNode;
 }) {
   const childrenToolUIParts = useMemo(
     () =>

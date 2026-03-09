@@ -1,4 +1,4 @@
-import type { ReadUIToolInvocation } from "../../../../shared/claude-code";
+import type { ReadUIToolInvocation } from "../../../../shared/claude-code/types";
 
 import type { BundledLanguage } from "shiki";
 import { CodeBlock, CodeBlockCopyButton } from "../ai-elements/code-block";

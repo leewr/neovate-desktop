@@ -1,4 +1,4 @@
-import type { WebSearchUIToolInvocation } from "../../../../shared/claude-code";
+import type { WebSearchUIToolInvocation } from "../../../../shared/claude-code/types";
 
 import { MessageResponse } from "../ai-elements/message";
 import { Tool, ToolContent, ToolHeader } from "../ai-elements/tool";
