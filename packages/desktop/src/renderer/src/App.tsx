@@ -30,6 +30,12 @@ export default function App() {
 
   useEffect(() => {
     if (import.meta.env.DEV && developerMode) {
+      void import("react-grab");
+    }
+  }, [developerMode]);
+
+  useEffect(() => {
+    if (import.meta.env.DEV && developerMode) {
       void import("react-scan").then(({ scan }) => {
         scan({ enabled: true });
       });
