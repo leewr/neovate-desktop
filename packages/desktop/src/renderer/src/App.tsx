@@ -17,7 +17,6 @@ import {
   AppLayoutTitleBar,
   AppLayoutTrafficLights,
 } from "./components/app-layout";
-import { ThemeToggle } from "./components/ui/theme-toggle";
 import { useConfigStore } from "./features/config/store";
 import { useGlobalKeybindings } from "./hooks/use-global-keybindings";
 
@@ -62,9 +61,6 @@ export default function App() {
       <AppLayoutPrimarySidebar>
         <div className="flex h-full flex-col p-3">
           <SessionList />
-        </div>
-        <div className="mt-auto flex items-center justify-end px-1.5 pb-1.5">
-          <ThemeToggle />
         </div>
       </AppLayoutPrimarySidebar>
 
