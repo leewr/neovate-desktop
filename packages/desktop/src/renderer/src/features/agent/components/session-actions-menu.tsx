@@ -67,9 +67,7 @@ export function SessionActionsMenu({
           <ContextMenuItem onClick={() => togglePinSession(projectPath, sessionId)}>
             {isPinned ? "Unpin" : "Pin"}
           </ContextMenuItem>
-          <ContextMenuItem variant="destructive" onClick={handleArchive}>
-            Archive
-          </ContextMenuItem>
+          <ContextMenuItem onClick={handleArchive}>Archive</ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem onClick={handleCopyWorkingDirectory}>
             Copy working directory
@@ -96,9 +94,7 @@ export function SessionActionsMenu({
         <MenuItem onClick={() => togglePinSession(projectPath, sessionId)}>
           {isPinned ? "Unpin" : "Pin"}
         </MenuItem>
-        <MenuItem className="text-destructive" onClick={handleArchive}>
-          Archive
-        </MenuItem>
+        <MenuItem onClick={handleArchive}>Archive</MenuItem>
         <MenuSeparator />
         <MenuItem onClick={handleCopyWorkingDirectory}>Copy working directory</MenuItem>
         <MenuItem onClick={handleCopySessionId}>Copy session ID</MenuItem>

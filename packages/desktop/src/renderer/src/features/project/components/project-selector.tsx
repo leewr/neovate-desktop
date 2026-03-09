@@ -28,7 +28,7 @@ export function ProjectSelector({ children, variant = "menu" }: ProjectSelectorP
       ) : (
         <MenuTrigger render={children} />
       )}
-      <MenuPopup side="bottom" align="start">
+      <MenuPopup side="bottom" align={variant === "select" ? "center" : "start"}>
         <MenuItem onClick={openProject} disabled={loading}>
           <HugeiconsIcon icon={FolderIcon} size={16} strokeWidth={1.5} />
           <span>Open Project</span>
