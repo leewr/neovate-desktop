@@ -157,19 +157,16 @@ function SingleProjectSessionList() {
       <Button
         variant="outline"
         size="sm"
-        className="mt-1 w-full"
+        className="mb-2 w-full"
         onClick={() => createNewSession(projectPath)}
       >
         <Plus size={14} />
         <span>New Chat</span>
       </Button>
 
-      <ul className="flex flex-col gap-0.5">
+      <ul className="flex flex-col">
         {pinnedItems.length > 0 && (
           <>
-            <li className="px-2 pt-2">
-              <span className="text-[10px] font-medium text-muted-foreground">Pinned</span>
-            </li>
             {pinnedItems.map((item) => {
               const id = item.kind === "memory" ? item.session.sessionId : item.info.sessionId;
               return (

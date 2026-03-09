@@ -30,11 +30,8 @@ export const PinnedSessionList = memo(function PinnedSessionList() {
   };
 
   return (
-    <div className="px-2 pb-2">
-      <div className="px-2 pb-1">
-        <span className="text-[10px] font-medium text-muted-foreground">Pinned</span>
-      </div>
-      <ul className="flex flex-col gap-0.5">
+    <div className="pb-2">
+      <ul className="flex flex-col">
         {items.map((item) => {
           const id = item.kind === "memory" ? item.session.sessionId : item.info.sessionId;
           return (
