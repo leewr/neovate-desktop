@@ -45,16 +45,18 @@ export const SidebarTitleBar = memo(function SidebarTitleBar() {
     <div className="flex items-center justify-between px-3 py-2">
       <span className="text-sm font-medium text-foreground">Sessions</span>
       <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7"
-          onClick={() => activeProject && createNewSession(activeProject.path)}
-          disabled={!activeProject}
-          title="New chat"
-        >
-          <Plus size={16} strokeWidth={1.5} />
-        </Button>
+        {sidebarOrganize === "chronological" && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => activeProject && createNewSession(activeProject.path)}
+            disabled={!activeProject}
+            title="New chat"
+          >
+            <Plus size={16} strokeWidth={1.5} />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"
