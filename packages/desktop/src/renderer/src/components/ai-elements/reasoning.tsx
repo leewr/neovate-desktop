@@ -150,9 +150,9 @@ const defaultGetThinkingMessage = (isStreaming: boolean, duration?: number) => {
     return <Shimmer duration={1}>Thinking...</Shimmer>;
   }
   if (duration === undefined) {
-    return <p>Thought for a few seconds</p>;
+    return <>Thought for a few seconds</>;
   }
-  return <p>Thought for {duration} seconds</p>;
+  return <>Thought for {duration} seconds</>;
 };
 
 export const ReasoningTrigger = memo(
