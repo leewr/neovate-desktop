@@ -212,7 +212,14 @@ export const ToolHeader = ({
     return toolInfo;
   }, [derivedName]);
 
-  const displayActionName = actionName || derivedName || "Tool";
+  // Determine the label to display:
+  // - If there's a file path, show action + filename
+  // - If title was parsed with actionName, use that
+  // - Otherwise use displayName or derivedName as fallback
+  const hasFilePath = fullPath !== null;
+  const mainLabel = hasFilePath
+    ? (actionName || derivedName)
+    : (actionName || displayName || derivedName);
 
   return (
     <CollapsibleTrigger
@@ -226,9 +233,10 @@ export const ToolHeader = ({
       <TooltipProvider>
         <ToolIcon className={cn("size-4 shrink-0", iconColor)} />
         <span className="text-sm text-foreground truncate">
-          {displayActionName}
+          {mainLabel}
           {extra && <span className="text-muted-foreground"> {extra}</span>}
-          {displayName && fullPath && (
+          {/* Only show displayName separately when it's a file path */}
+          {hasFilePath && displayName && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="cursor-default">
@@ -242,11 +250,6 @@ export const ToolHeader = ({
                 <p className="break-all">{fullPath}</p>
               </TooltipContent>
             </Tooltip>
-          )}
-          {displayName && !fullPath && (
-            <span className="text-muted-foreground">
-              {extra ? "" : " "}{displayName}
-            </span>
           )}
         </span>
         <StatusDot state={state} />
