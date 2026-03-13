@@ -102,6 +102,9 @@
   "settings.providers.resetDefaults": "Reset to defaults",
   "settings.providers.resetConfirm": "Reset baseURL, models, model map, and environment overrides to template defaults? Your API key and name will be kept.",
   "settings.providers.viewDocs": "View docs",
+  "settings.providers.showApiKey": "Show API key",
+  "settings.providers.hideApiKey": "Hide API key",
+  "settings.providers.copyApiKey": "Copy API key",
 
   "settings.mcp.title": "MCP",
   "settings.mcp.comingSoon": "MCP configuration coming soon...",

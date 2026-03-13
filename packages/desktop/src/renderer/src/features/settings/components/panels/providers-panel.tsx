@@ -1,4 +1,16 @@
-import { Edit2, ExternalLink, Plus, RotateCcw, Server, Trash2, X } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Edit2,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Plus,
+  RotateCcw,
+  Server,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -78,6 +90,10 @@ export const ProvidersPanel = () => {
   const [form, setForm] = useState<ProviderFormData>(emptyForm);
   const [error, setError] = useState<string | null>(null);
 
+  // API key visibility state
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKeyCopied, setApiKeyCopied] = useState(false);
+
   // Model list editing state
   const [newModelKey, setNewModelKey] = useState("");
   const [newModelDisplay, setNewModelDisplay] = useState("");
@@ -103,6 +119,7 @@ export const ProvidersPanel = () => {
   const startCreate = useCallback(() => {
     setEditingId(null);
     setError(null);
+    setShowApiKey(false);
     if (availableTemplates.length > 0) {
       setShowTemplatePicker(true);
       setIsCreating(false);
@@ -116,18 +133,21 @@ export const ProvidersPanel = () => {
   const selectTemplate = useCallback((template: BuiltInProvider) => {
     setShowTemplatePicker(false);
     setIsCreating(true);
+    setShowApiKey(false);
     setForm(builtInToForm(template, i18n.language));
   }, []);
 
   const selectCustom = useCallback(() => {
     setShowTemplatePicker(false);
     setIsCreating(true);
+    setShowApiKey(false);
     setForm(emptyForm);
   }, []);
 
   const startEdit = useCallback((p: Provider) => {
     setEditingId(p.id);
     setIsCreating(false);
+    setShowApiKey(false);
     setForm(providerToForm(p));
     setError(null);
   }, []);
@@ -136,7 +156,19 @@ export const ProvidersPanel = () => {
     setEditingId(null);
     setIsCreating(false);
     setShowTemplatePicker(false);
+    setShowApiKey(false);
     setError(null);
+  }, []);
+
+  const handleCopyApiKey = useCallback(() => {
+    if (!form.apiKey) return;
+    navigator.clipboard.writeText(form.apiKey);
+    setApiKeyCopied(true);
+    setTimeout(() => setApiKeyCopied(false), 2000);
+  }, [form.apiKey]);
+
+  const handleApiKeyBlur = useCallback(() => {
+    setShowApiKey(false);
   }, []);
 
   const validate = (): string | null => {
@@ -406,13 +438,46 @@ export const ProvidersPanel = () => {
           {/* API Key */}
           <div>
             <label className="text-sm font-medium">{t("settings.providers.apiKey")}</label>
-            <Input
-              type="password"
-              value={form.apiKey}
-              onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
-              placeholder="sk-..."
-              className="mt-1"
-            />
+            <div className="mt-1 flex items-center gap-1.5">
+              <Input
+                type={showApiKey ? "text" : "password"}
+                value={form.apiKey}
+                onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
+                onBlur={handleApiKeyBlur}
+                placeholder="sk-..."
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setShowApiKey((v) => !v)}
+                title={
+                  showApiKey
+                    ? t("settings.providers.hideApiKey")
+                    : t("settings.providers.showApiKey")
+                }
+              >
+                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={handleCopyApiKey}
+                disabled={!form.apiKey}
+                title={t("settings.providers.copyApiKey")}
+              >
+                {apiKeyCopied ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
             {(activeApiKeyURL || activeDocURL) && (
               <div className="flex items-center gap-3 mt-1.5">
                 {activeApiKeyURL && (
