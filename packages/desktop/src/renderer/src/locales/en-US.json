@@ -140,6 +140,9 @@
   "settings.providers.validation.modelMapInvalid": "Model map \"{{slot}}\" references \"{{modelId}}\" which is not in models",
   "settings.providers.saveFailed": "Failed to save provider",
   "settings.providers.deleteFailed": "Failed to delete provider",
+  "settings.providers.id": "ID",
+  "settings.providers.removeModel": "Remove model {{model}}",
+  "settings.providers.removeEnvOverride": "Remove environment override {{key}}",
   "settings.providers.toggleFailed": "Failed to toggle provider",
 
   "settings.skills": "Skills",

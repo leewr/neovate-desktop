@@ -45,6 +45,7 @@ import { Spinner } from "../../../../components/ui/spinner";
 import { Switch } from "../../../../components/ui/switch";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../../../../components/ui/tooltip";
 import { useRendererApp } from "../../../../core/app";
+import { cn } from "../../../../lib/utils";
 import { BenchmarkButton } from "../../../provider/benchmark-button";
 import { BenchmarkMetrics } from "../../../provider/benchmark-metrics";
 import { BenchmarkTooltipContent } from "../../../provider/benchmark-tooltip";
@@ -394,7 +395,12 @@ export const ProvidersPanel = () => {
                 <button
                   key={template.id}
                   disabled={isUsed}
-                  className={`flex flex-col items-start gap-1 rounded-lg border border-input p-3 text-left transition-colors ${isUsed ? "opacity-40 cursor-not-allowed" : "hover:border-primary hover:bg-accent"}`}
+                  className={cn(
+                    "flex flex-col items-start gap-1 rounded-lg border border-input p-3 text-left transition-colors",
+                    isUsed
+                      ? "opacity-40 cursor-not-allowed"
+                      : "hover:border-primary hover:bg-accent",
+                  )}
                   onClick={() => !isUsed && selectTemplate(template)}
                 >
                   <span className="text-sm font-medium">
@@ -507,8 +513,8 @@ export const ProvidersPanel = () => {
           {/* ID (read-only, only when editing) */}
           {editingId && (
             <div>
-              <label className="text-sm font-medium">ID</label>
-              <Input value={editingId} disabled className="mt-1 opacity-60" />
+              <label className="text-sm font-medium">{t("settings.providers.id")}</label>
+              <Input value={editingId} disabled className="mt-1" />
             </div>
           )}
 
@@ -677,6 +683,7 @@ export const ProvidersPanel = () => {
                       <button
                         className="text-muted-foreground hover:text-destructive"
                         onClick={() => removeModel(key)}
+                        aria-label={t("settings.providers.removeModel", { model: key })}
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -755,6 +762,7 @@ export const ProvidersPanel = () => {
                   <button
                     className="ml-auto text-muted-foreground hover:text-destructive"
                     onClick={() => removeEnvOverride(key)}
+                    aria-label={t("settings.providers.removeEnvOverride", { key })}
                   >
                     <X className="h-3 w-3" />
                   </button>

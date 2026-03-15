@@ -140,6 +140,9 @@
   "settings.providers.validation.modelMapInvalid": "模型映射 \"{{slot}}\" 引用了不存在的模型 \"{{modelId}}\"",
   "settings.providers.saveFailed": "保存服务商失败",
   "settings.providers.deleteFailed": "删除服务商失败",
+  "settings.providers.id": "ID",
+  "settings.providers.removeModel": "移除模型 {{model}}",
+  "settings.providers.removeEnvOverride": "移除环境变量 {{key}}",
   "settings.providers.toggleFailed": "切换服务商失败",
 
   "settings.mcp.title": "MCP",

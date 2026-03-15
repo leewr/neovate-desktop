@@ -60,7 +60,7 @@ export const SettingsMenu = ({
     >
       {/* Back to app button */}
       <button
-        className="flex items-center text-muted-foreground gap-3 px-3 py-3 text-sm transition-colors cursor-pointer hover:text-foreground border-b border-border"
+        className="flex items-center text-muted-foreground gap-3 px-3 py-3 text-sm transition-colors cursor-pointer hover:text-foreground focus-visible:text-foreground focus-visible:outline-none border-b border-border"
         style={{
           // @ts-expect-error - Electron specific CSS property
           WebkitAppRegion: "no-drag",
@@ -82,7 +82,7 @@ export const SettingsMenu = ({
               key={item.id}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors cursor-pointer rounded-[6px] border",
+                "w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors cursor-pointer rounded-md border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 isActive
                   ? "bg-accent text-accent-foreground border-border font-medium"
                   : "text-muted-foreground hover:text-foreground border-transparent",
@@ -93,7 +93,7 @@ export const SettingsMenu = ({
               }}
               onClick={() => onMenuSelect(item.id)}
             >
-              <Icon className="size-[18px]" />
+              <Icon className="size-4.5" />
               <span>{t(MENU_LABEL_KEYS[item.id])}</span>
             </button>
           );

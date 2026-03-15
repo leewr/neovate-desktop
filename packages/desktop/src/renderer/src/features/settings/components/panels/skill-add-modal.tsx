@@ -142,9 +142,21 @@ export const SkillAddModal = ({ projects, onClose, onRefresh }: SkillAddModalPro
               />
               <div className="text-xs text-muted-foreground space-y-1">
                 <div>{t("settings.skills.examples")}</div>
-                <div className="pl-2">github.com/user/claude-skills</div>
-                <div className="pl-2">npm:@claude-skills/pr-apply</div>
-                <div className="pl-2">/path/to/local/skill</div>
+                <div className="pl-2">
+                  <code className="bg-muted px-1 py-0.5 rounded text-[11px]">
+                    github.com/user/claude-skills
+                  </code>
+                </div>
+                <div className="pl-2">
+                  <code className="bg-muted px-1 py-0.5 rounded text-[11px]">
+                    npm:@claude-skills/pr-apply
+                  </code>
+                </div>
+                <div className="pl-2">
+                  <code className="bg-muted px-1 py-0.5 rounded text-[11px]">
+                    /path/to/local/skill
+                  </code>
+                </div>
               </div>
               {phase.error && <p className="text-sm text-destructive">{phase.error}</p>}
             </div>

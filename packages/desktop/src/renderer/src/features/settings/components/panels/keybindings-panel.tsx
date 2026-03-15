@@ -36,7 +36,7 @@ interface KeyBadgeProps {
 }
 
 const KeyBadge = ({ keyStr }: KeyBadgeProps) => (
-  <span className="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded text-xs font-medium bg-muted border border-border text-foreground">
+  <span className="inline-flex items-center justify-center min-w-6 px-1.5 py-0.5 rounded text-xs font-medium bg-muted border border-border text-foreground">
     {keyStr}
   </span>
 );
