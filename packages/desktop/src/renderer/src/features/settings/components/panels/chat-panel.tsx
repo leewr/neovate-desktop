@@ -28,8 +28,10 @@ import {
 import { Spinner } from "../../../../components/ui/spinner";
 import { ToggleOptions } from "../../../../components/ui/toggle-options";
 import { client } from "../../../../orpc";
+import { claudeCodeChatManager } from "../../../agent/chat-manager";
 import { useAgentStore } from "../../../agent/store";
 import { useConfigStore } from "../../../config/store";
+import { useProjectStore } from "../../../project/store";
 import { useProviderStore } from "../../../provider/store";
 import { SettingsRow } from "../settings-row";
 
@@ -44,6 +46,8 @@ const permissionModeKeys = {
   acceptEdits: "settings.chat.permissionMode.acceptEdits",
   bypassPermissions: "settings.chat.permissionMode.bypassPermissions",
 } as const satisfies Record<ConfigPermissionMode, string>;
+
+const EMPTY_MODELS: import("../../../../../../shared/features/agent/types").ModelInfo[] = [];
 
 /** Encode provider+model into a single radio value. "" = auto. */
 function encodeValue(providerId: string | undefined, model: string | undefined): string {
@@ -176,7 +180,7 @@ function GlobalModelSelect() {
         return session.availableModels;
       }
     }
-    return [];
+    return EMPTY_MODELS;
   });
 
   // Load providers and current selection on mount
@@ -199,6 +203,8 @@ function GlobalModelSelect() {
     setSelectedProviderId(providerId ?? undefined);
     setSelectedModel(model ?? undefined);
     client.config.setGlobalModelSelection({ providerId, model });
+    const projectPath = useProjectStore.getState().activeProject?.path;
+    claudeCodeChatManager.invalidateNewSessions(projectPath);
   }, []);
 
   if (!selectionLoaded) {

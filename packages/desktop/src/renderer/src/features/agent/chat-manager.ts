@@ -87,6 +87,24 @@ export class ClaudeCodeChatManager {
     this.rpc.claudeCode.closeSession({ sessionId }).catch(() => {});
   }
 
+  async invalidateNewSessions(cwd?: string): Promise<void> {
+    const store = useAgentStore.getState();
+    let removedActive = false;
+
+    for (const [id, session] of store.sessions) {
+      if (session.isNew) {
+        if (id === store.activeSessionId) removedActive = true;
+        await this.removeSession(id);
+        useAgentStore.getState().removeSession(id);
+      }
+    }
+
+    if (removedActive && cwd) {
+      const result = await this.createSession(cwd);
+      registerSessionInStore(result.sessionId, cwd, result, true);
+    }
+  }
+
   async #handleContextClear(
     oldSessionId: string,
     pending: import("./chat-state").PendingContextClear,
