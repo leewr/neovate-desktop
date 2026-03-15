@@ -24,6 +24,7 @@ bun dev
 | `bun format`    | Format code with oxfmt                           |
 | `bun test`      | Run unit tests in watch mode (vitest)            |
 | `bun test:run`  | Run unit tests once (CI)                         |
+| `bun start`     | Preview production build locally (electron-vite) |
 | `bun test:e2e`  | Build and run e2e tests (playwright)             |
 | `bun ready`     | Pre-push readiness check (format + check + test) |
 
