@@ -67,7 +67,7 @@ Run `bun ready` — it runs format check + typecheck + lint + tests. This is the
 - Formatter: `oxfmt` (not prettier)
 - Tailwind CSS 4 (CSS-first config, no tailwind.config.js)
 - Zod 4 (not zod 3)
-- Icons: `@hugeicons/core-free-icons`
+- Icons: `lucide-react` (general use), `@hugeicons/core-free-icons` (sidebar/plugin icons)
 
 ## Design Context
 
