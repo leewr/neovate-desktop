@@ -21,13 +21,10 @@ async function beforePack(context) {
   if (!arch) throw new Error(`Unsupported arch: ${context.arch}`);
 
   console.log(`  • downloading bun for ${context.packager.platform.name}/${arch}...`);
-  execSync(
-    `bun scripts/download-bun.ts --platform ${context.packager.platform.name} --arch ${arch}`,
-    {
-      cwd: projectDir,
-      stdio: "inherit",
-    },
-  );
+  execSync(`bun scripts/download-bun.ts --platform darwin --arch ${arch}`, {
+    cwd: projectDir,
+    stdio: "inherit",
+  });
 }
 
 const config = {
@@ -46,6 +43,7 @@ const config = {
       provider: "github",
       owner: "neovateai",
       repo: "neovate-desktop",
+      releaseType: "draft",
     },
   ],
 
@@ -71,7 +69,7 @@ const config = {
     "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}",
   ],
 
-  compression: isDev ? "store" : "maximum",
+  compression: isDev ? "normal" : "maximum",
 
   mac: {
     icon: isDev ? "build/icons/dev/icon.icns" : "build/icons/prod/icon.icns",

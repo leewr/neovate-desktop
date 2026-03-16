@@ -14,6 +14,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   check:
@@ -37,6 +38,141 @@ jobs:
         run: bun run check
       - name: Run unit tests
         run: bun run test:run
+
+  build-mac-dev:
+    needs: check
+    if: github.event_name == 'pull_request'
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            arch: arm64
+          - os: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+      - name: Cache bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Build dev package
+        working-directory: packages/desktop
+        run: bun run build && BUILD_ENV=dev bunx electron-builder --mac --${{ matrix.arch }} --config configs/electron-builder.mjs --publish=never
+      - name: Calculate artifact sizes
+        id: sizes
+        working-directory: packages/desktop
+        run: |
+          ZIP_FILE=$(find release -name "*-${{ matrix.arch }}.zip" -type f | head -n 1)
+          if [ -f "$ZIP_FILE" ]; then
+            ZIP_SIZE_BYTES=$(stat -f%z "$ZIP_FILE" 2>/dev/null || stat -c%s "$ZIP_FILE" 2>/dev/null)
+            ZIP_SIZE_MB=$(echo "scale=2; $ZIP_SIZE_BYTES / 1048576" | bc)
+          fi
+          mkdir -p size-info
+          echo "ZIP: ${ZIP_SIZE_MB:-N/A} MB" > size-info/${{ matrix.arch }}-sizes.txt
+          cat size-info/${{ matrix.arch }}-sizes.txt
+      - name: Upload size info
+        uses: actions/upload-artifact@v4
+        with:
+          name: size-info-${{ matrix.arch }}
+          path: packages/desktop/size-info/${{ matrix.arch }}-sizes.txt
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: neovate-dev-${{ matrix.arch }}
+          path: packages/desktop/release/*-${{ matrix.arch }}.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  comment:
+    needs: build-mac-dev
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Download size info artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: size-info-*
+          path: size-info
+      - name: Post PR comment with artifact links
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const identifier = '<!-- neovate-build -->';
+
+            const readSize = (arch) => {
+              try {
+                const sizeFile = path.join('size-info', `size-info-${arch}`, `${arch}-sizes.txt`);
+                const content = fs.readFileSync(sizeFile, 'utf8');
+                const zipLine = content.trim().split('\n').find(l => l.startsWith('ZIP:'));
+                return zipLine ? zipLine.split(':')[1].trim() : 'N/A';
+              } catch (error) {
+                console.error(`Error reading size info for ${arch}:`, error);
+                return 'N/A';
+              }
+            };
+
+            const arm64Size = readSize('arm64');
+            const x64Size = readSize('x64');
+
+            const { data: { artifacts } } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+            });
+
+            const arm64 = artifacts.find(a => a.name === 'neovate-dev-arm64');
+            const x64 = artifacts.find(a => a.name === 'neovate-dev-x64');
+
+            const artifactUrl = (artifact) =>
+              `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/artifacts/${artifact.id}`;
+
+            const body = [
+              identifier,
+              '## Build Ready',
+              '',
+              '| Architecture | Download | Size |',
+              '|--------------|----------|------|',
+              `| Apple Silicon | ${arm64 ? `[Download](${artifactUrl(arm64)})` : 'N/A'} | ${arm64Size} |`,
+              `| Intel | ${x64 ? `[Download](${artifactUrl(x64)})` : 'N/A'} | ${x64Size} |`,
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes(identifier));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }
 
   e2e:
     runs-on: ubuntu-latest
