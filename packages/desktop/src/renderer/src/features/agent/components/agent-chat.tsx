@@ -1,8 +1,10 @@
 import type { FileUIPart } from "ai";
 import type { StickToBottomContext } from "use-stick-to-bottom";
 
+import { ArrowDown01Icon, ArrowUp01Icon, Copy01Icon, Tick01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import debug from "debug";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ImageAttachment } from "../../../../../shared/features/agent/types";
 
@@ -27,6 +29,7 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from "../../../components/ai-elements/conversation";
+import { Button } from "../../../components/ui/button";
 import { cn } from "../../../lib/utils";
 import { claudeCodeChatManager } from "../chat-manager";
 import { useClaudeCodeChat } from "../hooks/use-claude-code-chat";
@@ -38,6 +41,50 @@ import { PermissionDialog } from "./permission-dialog";
 import { TaskProgress } from "./task-progress";
 import { ClaudeCodeToolUIPart } from "./tool-parts";
 import { WelcomePanel } from "./welcome-panel";
+
+function ChatError({ message }: { message: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const firstLine = message.split("\n")[0];
+  const hasDetails = message.length > firstLine.length;
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(message);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [message]);
+
+  return (
+    <div className="mx-4 mb-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-400">
+      <div className="flex items-start gap-2">
+        <span className="min-w-0 flex-1 break-words">{firstLine}</span>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <Button variant="ghost" size="icon-xs" onClick={handleCopy} title="Copy error">
+            {copied ? (
+              <HugeiconsIcon icon={Tick01Icon} size={14} strokeWidth={1.5} />
+            ) : (
+              <HugeiconsIcon icon={Copy01Icon} size={14} strokeWidth={1.5} />
+            )}
+          </Button>
+          {hasDetails && (
+            <Button variant="ghost" size="icon-xs" onClick={() => setExpanded(!expanded)}>
+              {expanded ? (
+                <HugeiconsIcon icon={ArrowUp01Icon} size={14} strokeWidth={1.5} />
+              ) : (
+                <HugeiconsIcon icon={ArrowDown01Icon} size={14} strokeWidth={1.5} />
+              )}
+            </Button>
+          )}
+        </div>
+      </div>
+      {expanded && (
+        <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap break-all text-xs opacity-80">
+          {message.slice(firstLine.length + 1)}
+        </pre>
+      )}
+    </div>
+  );
+}
 
 export function AgentChat() {
   const multiProjectSupport = useConfigStore((s) => s.multiProjectSupport);
@@ -217,11 +264,7 @@ function AgentChatSession({
       </Conversation>
       <div className="shrink-0 max-w-3xl mx-auto w-full">
         <TaskProgress tasks={tasks} />
-        {error && (
-          <div className="mx-4 mb-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-700">
-            {error.message}
-          </div>
-        )}
+        {error && <ChatError message={error.message} />}
         <div className={cn("relative min-w-0", hasPendingRequest && "grid")}>
           <div className={cn(hasPendingRequest && "col-start-1 row-start-1 self-end z-10 min-w-0")}>
             <PermissionDialog sessionId={sessionId} />
