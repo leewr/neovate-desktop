@@ -4,7 +4,7 @@ import { EventPublisher } from "@orpc/server";
 import debug from "debug";
 import * as pty from "node-pty";
 
-import { ShellEnvService } from "./shell-env-service";
+import type { PluginContext } from "../../core/plugin/types";
 
 const log = debug("neovate:terminal:pty");
 
@@ -17,20 +17,17 @@ export interface PtySession {
 
 export class PtyManager {
   readonly #sessions = new Map<string, PtySession>();
-  readonly #shellEnvService: ShellEnvService;
+  readonly #shell: PluginContext["shell"];
 
-  constructor(shellEnvService: ShellEnvService) {
-    this.#shellEnvService = shellEnvService;
+  constructor(shell: PluginContext["shell"]) {
+    this.#shell = shell;
   }
 
-  spawn(opts: { cwd?: string; cols: number; rows: number }): string {
+  async spawn(opts: { cwd?: string; cols: number; rows: number }): Promise<string> {
     const cols = Math.max(1, opts.cols);
     const rows = Math.max(1, opts.rows);
-    const shell = this.#shellEnvService.getShell();
-
-    // Get cached shell environment, fallback to process.env if not yet cached
-    const shellEnv =
-      this.#shellEnvService.getEnvironmentSync() ?? (process.env as Record<string, string>);
+    const env = await this.#shell.getEnv();
+    const shell = env.SHELL ?? "/bin/bash";
 
     const publisher = new EventPublisher<{ data: string }>();
     const exitController = new AbortController();
@@ -43,7 +40,7 @@ export class PtyManager {
       cols,
       rows,
       cwd,
-      env: shellEnv,
+      env,
     });
 
     term.onData((chunk) => publisher.publish("data", chunk));
