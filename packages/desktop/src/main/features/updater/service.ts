@@ -22,6 +22,10 @@ export class UpdaterService implements IUpdateService {
   readonly publisher = new EventPublisher<{ state: UpdaterState }>();
   private checkInterval: ReturnType<typeof setInterval> | null = null;
   private checkTimeout: ReturnType<typeof setTimeout> | null = null;
+  private installRequested = false;
+  private diagnosticsAttached = false;
+  private diagnosticCleanups: Array<() => void> = [];
+  private lastLoggedProgressBucket = -1;
 
   // Internal concurrency-control state (not directly exposed to UI)
   private isChecking = false;
@@ -41,6 +45,7 @@ export class UpdaterService implements IUpdateService {
   }
 
   private setState(newState: UpdaterState) {
+    log("state transition %O -> %O", this._state, newState);
     this._state = newState;
     this.publisher.publish("state", newState);
   }
@@ -50,6 +55,93 @@ export class UpdaterService implements IUpdateService {
       clearTimeout(this.checkTimeout);
       this.checkTimeout = null;
     }
+  }
+
+  private formatError(error: unknown) {
+    if (error instanceof Error) {
+      return {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      };
+    }
+    return error;
+  }
+
+  private logSnapshot(reason: string) {
+    const updater = autoUpdater as AppUpdater & {
+      quitAndInstallCalled?: boolean;
+      squirrelDownloadedUpdate?: boolean;
+      downloadedUpdateHelper?: {
+        file?: string | null;
+        packageFile?: string | null;
+      } | null;
+      nativeUpdater?: { getFeedURL?: () => string | null };
+    };
+
+    log("snapshot:%s %O", reason, {
+      state: this._state,
+      surfaceUI: this.surfaceUI,
+      isChecking: this.isChecking,
+      installRequested: this.installRequested,
+      pendingUpdate: this.pendingUpdate,
+      autoDownload: updater.autoDownload,
+      quitAndInstallCalled: updater.quitAndInstallCalled,
+      squirrelDownloadedUpdate: updater.squirrelDownloadedUpdate,
+      downloadedFile: updater.downloadedUpdateHelper?.file ?? null,
+      downloadedPackageFile: updater.downloadedUpdateHelper?.packageFile ?? null,
+      nativeFeedURL: updater.nativeUpdater?.getFeedURL?.() ?? null,
+    });
+  }
+
+  private attachDiagnostics() {
+    if (this.diagnosticsAttached) return;
+    this.diagnosticsAttached = true;
+
+    this.logSnapshot("attach-diagnostics");
+
+    const nativeUpdater = (
+      autoUpdater as AppUpdater & {
+        nativeUpdater?: {
+          on?: (event: string, listener: (...args: unknown[]) => void) => void;
+          removeListener?: (event: string, listener: (...args: unknown[]) => void) => void;
+        };
+      }
+    ).nativeUpdater;
+
+    if (!nativeUpdater?.on) {
+      log("native updater diagnostics unavailable");
+      return;
+    }
+
+    const nativeEvents = [
+      "error",
+      "checking-for-update",
+      "update-available",
+      "update-not-available",
+      "update-downloaded",
+      "before-quit-for-update",
+    ];
+
+    for (const event of nativeEvents) {
+      const handler = (...args: unknown[]) => {
+        const details = event === "error" ? args.map((arg) => this.formatError(arg)) : args;
+        log("nativeUpdater event:%s %O", event, details);
+        this.logSnapshot(`native:${event}`);
+      };
+
+      nativeUpdater.on(event, handler);
+      this.diagnosticCleanups.push(() => nativeUpdater.removeListener?.(event, handler));
+    }
+  }
+
+  private shouldSurfaceError(): boolean {
+    return (
+      this.surfaceUI ||
+      this._state.status === "error" ||
+      this._state.status === "downloading" ||
+      this._state.status === "ready"
+    );
   }
 
   check(manual = false) {
@@ -104,15 +196,23 @@ export class UpdaterService implements IUpdateService {
   }
 
   install() {
-    log("install requested", { status: this._state.status });
-    if (this._state.status !== "ready") {
+    log("install requested", {
+      state: this._state,
+      pendingUpdate: this.pendingUpdate,
+      installRequested: this.installRequested,
+    });
+    if (this.pendingUpdate?.status !== "ready" || this.installRequested) {
+      this.logSnapshot("install-ignored");
       return;
     }
+    this.installRequested = true;
+    this.logSnapshot("install-before-quitAndInstall");
     autoUpdater.quitAndInstall();
   }
 
   async init(options?: UpdaterOptions) {
     log("init", { hasFeedURL: !!options?.feedURL });
+    this.attachDiagnostics();
     autoUpdater.autoDownload = false;
 
     if (options?.feedURL) {
@@ -121,6 +221,7 @@ export class UpdaterService implements IUpdateService {
           typeof options.feedURL === "function" ? await options.feedURL() : options.feedURL;
         autoUpdater.setFeedURL(resolved);
         log("feed URL set", { feedURL: resolved });
+        this.logSnapshot("setFeedURL");
       } catch (err) {
         console.error(
           "[UpdaterService] Failed to resolve feedURL, using build-time config:",
@@ -133,6 +234,8 @@ export class UpdaterService implements IUpdateService {
       log("update not available", { surfaceUI: this.surfaceUI });
       this.clearCheckTimeout();
       this.isChecking = false;
+      this.installRequested = false;
+      this.logSnapshot("update-not-available");
       if (this.surfaceUI || this._state.status === "error") {
         this.setState({ status: "up-to-date" });
       }
@@ -142,7 +245,10 @@ export class UpdaterService implements IUpdateService {
       log("update available", { version: info.version, surfaceUI: this.surfaceUI });
       this.clearCheckTimeout();
       this.isChecking = false;
+      this.installRequested = false;
+      this.lastLoggedProgressBucket = -1;
       this.pendingUpdate = { version: info.version, status: "downloading", percent: 0 };
+      this.logSnapshot("update-available");
       if (this.surfaceUI || this._state.status === "error") {
         this.setState({ status: "downloading", version: info.version, percent: 0 });
       }
@@ -152,6 +258,17 @@ export class UpdaterService implements IUpdateService {
     autoUpdater.on("download-progress", (p) => {
       if (this.pendingUpdate) {
         this.pendingUpdate.percent = Math.round(p.percent);
+      }
+      const progressBucket = Math.max(0, Math.min(10, Math.floor(p.percent / 10)));
+      if (progressBucket !== this.lastLoggedProgressBucket) {
+        this.lastLoggedProgressBucket = progressBucket;
+        log("download progress %O", {
+          version: this.pendingUpdate?.version ?? null,
+          percent: Math.round(p.percent),
+          transferred: p.transferred,
+          total: p.total,
+          bytesPerSecond: p.bytesPerSecond,
+        });
       }
       if (this.surfaceUI && this.pendingUpdate) {
         this.setState({
@@ -167,16 +284,21 @@ export class UpdaterService implements IUpdateService {
       if (this.pendingUpdate) {
         this.pendingUpdate.status = "ready";
       }
+      this.lastLoggedProgressBucket = -1;
+      this.logSnapshot("update-downloaded");
       // Always surface ready — user must see this toast
       this.setState({ status: "ready", version: info.version });
     });
 
     autoUpdater.on("error", (err) => {
-      log("update error", { message: err.message });
+      log("update error %O", this.formatError(err));
       this.clearCheckTimeout();
       this.isChecking = false;
+      this.installRequested = false;
+      this.lastLoggedProgressBucket = -1;
       this.pendingUpdate = null;
-      if (this.surfaceUI) {
+      this.logSnapshot(`error:${err.message}`);
+      if (this.shouldSurfaceError()) {
         this.setState({ status: "error", message: err.message });
       }
     });
@@ -188,6 +310,9 @@ export class UpdaterService implements IUpdateService {
   dispose() {
     if (this.checkInterval) clearInterval(this.checkInterval);
     this.clearCheckTimeout();
+    for (const cleanup of this.diagnosticCleanups.splice(0)) {
+      cleanup();
+    }
     autoUpdater.removeAllListeners();
   }
 }
