@@ -228,6 +228,7 @@
   "settings.skills.detail.uninstall": "Uninstall",
   "settings.skills.detail.update": "Update",
   "settings.skills.detail.updating": "Updating...",
+  "settings.skills.noDescription": "No description",
 
   "common.loading": "Loading...",
   "common.yes": "yes",
@@ -299,6 +300,8 @@
   "session.copyWorkingDirectory": "Copy working directory",
   "session.copySessionId": "Copy session ID",
   "session.copyJsonlPath": "Copy session JSONL path",
+  "session.showMore": "Show {{count}} more of {{total}}",
+  "session.showLess": "Show less",
 
   "project.openProject": "Open Project",
   "project.selectProject": "Select a project...",
@@ -322,10 +325,13 @@
   "contentPanel.noProjectSelected": "No project selected",
   "contentPanel.noTabsOpen": "No tabs open",
 
+  "terminal.search.noResults": "No results",
+  "terminal.search.results": "{{current}} of {{total}}",
+
   "error.somethingWentWrong": "Something went wrong",
   "error.tryAgain": "Try again",
 
-  "chat.guideMessage": "Hi, I am {{APP_NAME}}. Let's create something together!",
+  "chat.guideMessage": "Hi~  I'm {{APP_NAME}}, what shall we create today?",
   "chat.placeholder": "Type a message...",
   "chat.attachImage": "Attach image",
   "chat.attachImages": "Attach images",
